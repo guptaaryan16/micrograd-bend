@@ -12,8 +12,7 @@
 #     our own, Not a big deal.,,,
 # 3. Less support on having lists within objects, need to see a work around this.
 # 4. Seems like we can mutate the var of an object inside a function, not sure if it is a bug 
-
-
+# 5. Seems like I know nothing much about functional prpgramming, not a worry
 
 ### List
 # Taken from https://github.com/HigherOrderCO/Bend/blob/main/examples/list.bend
@@ -47,89 +46,89 @@ List/head = @l
 #
 
 ### Defs and Constructor 
-object Value {value, grad, _prev, _backward}
+# object Value {value, grad, _prev, _backward}
+def Value(val, var_name):
+  # Default Arguments not supported so using this is the only Option 
+  # Args: val 
+  # Props: 
+  #   0: name
+  #   1: Value 
+  #   2: grad 
+  #   3: _prev (for traversal in the topo func)
+  #   4: ops
+  #   5: _grad_func
+  # return: Node in graph 
+  return {
+    0: var_name
+    1: val,
+    2: 0.0,
+    3: [],
+    4: Ops/None, 
+    5: lambda x: x
+  }
+
 
 type Ops:
   add
   sub
   mul
-
-def identity(x):
-  return x
-
-def Value.define(num):
-  return Value {value: num, grad: 0.0, _prev: [], _backward: identity}
-
+  None
 
 ### Debugging and Repr 
-def Value.print(v1):
+def val_print(v1):
   # Crucial for debugging so wrote it pretty soon, yk
-  open Value: v1
-  return ["Value=", v1.value, "grad=", v1.grad]  
+  return ["Value=", v1[1], "grad=", v1[2]]  
 
 ### OPS Backward 
-def _backward(out, v1, v2, ops):
-  open Value: out
-  open Value: v1
-  open Value: v2
-
-  match ops:
+def _backward(out, grad):
+  match out[3]:
     case Ops/add:
-      v1.grad += out.grad 
-      v2.grad += out.grad 
-      return "+"
+      List/index(out._prev, 0)[2] += grad 
+      List/index(out._prev, 1)[2] += grad  
+      return (List/index(out._prev, 0), List/index(out._prev, 1))
     case Ops/sub:
-      v1.grad -= out.grad 
-      v2.grad -= out.grad 
-      return "-"
+      List/index(out._prev, 0)[2] += grad 
+      List/index(out._prev, 1)[2] += grad 
+      return (List/index(out._prev, 0), List/index(out._prev, 1))
+    
     case Ops/mul:
-      v1.grad += v2.grad * out.grad 
-      v2.grad += v1.grad * out.grad 
-      return "*"
+
+      List/index(out._prev, 0)[2] += List/index(out._prev, 1)[2] * grad 
+      List/index(out._prev, 1)[2] += List/index(out._prev, 0)[2] * grad 
+      return (List/index(out._prev, 0), List/index(out._prev, 1))
     case _:
-      return "_"
+      return (List/index(out._prev, 0), List/index(out._prev, 1))
 
 ### OPS Forward 
-def Value.add(v1, v2):
-  open Value: v1
-  open Value: v2
-  out = Value.define(v1.value + v2.value)
+def add(v1, v2, var_name):
+  out = Value(v1[1] + v2[1], var_name)
   
-  open Value: out
-  
-  out._prev = [v1, v2]
-  out._backward = _backward(out, v1, v2, Ops/add)
+  out[3] = [v1, v2]
+  out[4] = Ops/add
+  out[5] = _backward(out, v1, v2, Ops/add)
   return out 
 
-def Value.sub(v1, v2):
-  open Value: v1
-  open Value: v2
-  out = Value.define(v1.value - v2.value)
+def sub(v1, v2, var_name):
+  out = Value(v1[1]- v2[1], var_name)
   
-  open Value: out
-
-  out._prev = [v1, v2]
-  out._backward = _backward(out, v1, v2, Ops/sub)
+  out[3] = [v1, v2]
+  out[4] = Ops/sub
+  out[5] = _backward(out, v1, v2, Ops/sub)
   return out 
 
-def Value.mul(v1, v2):
-  open Value: v1
-  open Value: v2
-  out = Value.define(v1.value * v2.value)
-  
-  open Value: out
-  
-  out._prev = [v1, v2]
-  out._backward = _backward(out, v1, v2, Ops/mul)
+def mul(v1, v2, var_name):
+  out = Value(v1[1] * v2[1], var_name)
+
+  out[3] = [v1, v2]
+  out[4] = Ops/mul
+  out[5] = _backward(out, v1, v2, Ops/mul)
   return out
 
-### Topological Sort 
-def topo_sort(v1, visited):
-  res = []
-  visited = {}
-  # Now we need to visit each 
 
-  return res
+def _backward_impl(v, grad, grads):
+  if (v[4]!= Ops/None):
+    child_grads = _backward(v, grad)
+  return grads
 
 ### Backward Pass
 def backward(out):
@@ -137,14 +136,19 @@ def backward(out):
   visited = []
   # Implement topiological Sort Function for the graph
   
-  out.grad = 1.000
+  out[2] = 1.000
   # Implement the Optional Sort 
   
   return 0
 
+def apply_grads(value_and_grads):
+  # Traverse the map and create all the vars and their Values 
+  return 
+
 def main():
-  v1 = Value.define(3)
-  v2 = Value.define(2)    
-  out = Value.mul(v1, v2)
-  open Value: out
-  return Value.print(List/index(out._prev, 0))
+  v1 = Value(3, "v1")
+  v2 = Value(2, "v2")    
+  out = add(v1, v2, "out")
+  out[1] = 1.000
+  (out, v1, v2) = _backward(out, v1, v2, Ops/add)
+  return val_print(List/index(out[2], 0))
