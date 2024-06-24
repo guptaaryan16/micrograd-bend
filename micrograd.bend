@@ -38,12 +38,20 @@ List/head = @l
     List/Nil: []
   }
 
-### Map 
-#
-
-### Set 
-#
-#
+# List count:
+# List l -> uint -> uint
+# returns the number of instances of Some s in list l.
+List/count/aux = @acc @l @s
+  match l {
+    List/Nil: acc
+    List/Cons: use acc = switch (== l.head s) {
+      0: acc;
+      _: (+ acc 1);
+    }
+    (List/count/aux acc l.tail s)
+  }
+List/count = @l @s
+  (List/count/aux 0 l s)
 
 ### Defs and Constructor 
 # object Value {value, grad, _prev, _backward}
@@ -59,7 +67,7 @@ def Value(val, var_name):
   #   5: _grad_func
   # return: Node in graph 
   return {
-    0: var_name
+    0: var_name,
     1: val,
     2: 0.0,
     3: [],
@@ -81,23 +89,27 @@ def val_print(v1):
 
 ### OPS Backward 
 def _backward(out, grad):
+  v1 = List/index(out[3], 0)
+  v2 = List/index(out[3], 1)
   match out[3]:
     case Ops/add:
-      List/index(out._prev, 0)[2] += grad 
-      List/index(out._prev, 1)[2] += grad  
-      return (List/index(out._prev, 0), List/index(out._prev, 1))
+      v1[2] += grad 
+      v2[2] += grad  
+      return [v1, v2]
+
     case Ops/sub:
-      List/index(out._prev, 0)[2] += grad 
-      List/index(out._prev, 1)[2] += grad 
-      return (List/index(out._prev, 0), List/index(out._prev, 1))
+      v1[2] += grad 
+      v2[2] += grad 
     
+      return [v1, v2]
+
     case Ops/mul:
 
-      List/index(out._prev, 0)[2] += List/index(out._prev, 1)[2] * grad 
-      List/index(out._prev, 1)[2] += List/index(out._prev, 0)[2] * grad 
-      return (List/index(out._prev, 0), List/index(out._prev, 1))
+      v1[2] += v2[2] * grad 
+      v2[2] += v1[2] * grad 
+      return [v1, v2]
     case _:
-      return (List/index(out._prev, 0), List/index(out._prev, 1))
+      return [v1, v2]
 
 ### OPS Forward 
 def add(v1, v2, var_name):
@@ -124,31 +136,35 @@ def mul(v1, v2, var_name):
   out[5] = _backward(out, v1, v2, Ops/mul)
   return out
 
+# def get_child_grad()
 
 def _backward_impl(v, grad, grads):
-  if (v[4]!= Ops/None):
+  if (v[4] != Ops/None):
     child_grads = _backward(v, grad)
-  return grads
+    match child_grads:
+      case List/Cons:
+        grad_var = child_grads.head
+        grads[grad_var[0]] = grad_var[2]
+        #grads = _backward_impl(grad_var, grads[grad_var[2]], grads)
+        grads = _backward_impl(child_grads.tail, grad, grads)
+        return grads
+      case List/Nil:
+        return grads
+  else:
+    return grads
 
 ### Backward Pass
 def backward(out):
-  top = []
-  visited = []
-  # Implement topiological Sort Function for the graph
-  
-  out[2] = 1.000
-  # Implement the Optional Sort 
-  
-  return 0
+  return _backward_impl(out, 0.0, {"out": 0.0})
 
 def apply_grads(value_and_grads):
   # Traverse the map and create all the vars and their Values 
-  return 
+  return 0
 
 def main():
   v1 = Value(3, "v1")
   v2 = Value(2, "v2")    
   out = add(v1, v2, "out")
-  out[1] = 1.000
-  (out, v1, v2) = _backward(out, v1, v2, Ops/add)
-  return val_print(List/index(out[2], 0))
+  grads = backward(out)
+  return grads
+

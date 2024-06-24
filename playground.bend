@@ -24,9 +24,9 @@ List/head = @l
 
 def Value(val):
   return {
-    "value": val,
-    "grad": 0.0,
-    "children": []
+    0 : val,
+    1 : 0.0,
+    2 : []
 }
 
 object Val {value, grad, _prev}
@@ -34,10 +34,10 @@ object Val {value, grad, _prev}
 def value_def(val):
   return Val {value: val, grad: 0.00, _prev: []}
 
-def Val.print(v1):
-  open Val: v1
-  return ["Value=", v1.value, "grad=", v1.grad ]
-  
+
+def print_val(v1):
+  open Val: v1 
+  return ["Value=", v1.value, "grad=", v1.grad ]  
 
 type Ops:
   add 
@@ -74,13 +74,35 @@ def Val.print_a(out, a, b):
   open Val: out
   temp =  List/index(out._prev, 0)
   open Val: temp
-  return temp.value
+  return print(temp)
+
+def Val.print():
+  return 0
+
+def print_my_val(out, a):
+  a = set_grad(a)
+  return print_value(List/index(out[2], 0))
+
+def set_grad(v1):
+  v1[1] += 20.0
+  return v1
+
+def print_value(v1):
+  return ["value=", v1[0], "grad=", v1[1]]
+
+def grads_eval(my_list, grads):
+  match my_list:
+    case List/Cons:
+      grads[my_list.head[0]] = my_list.head[1]  + 10     
+      return grads_eval(my_list.tail, grads)
+    case List/Nil:
+      return grads
+def print_value_s(a):
+  return ["value=", a]
 
 def main():
-  a = value_def(10)
-  b = value_def(20)
-  out = value_def(30) 
-  
-  open Val: out
-  out._prev = [a, b] 
-  return Val.print(List/index(out._prev, 0)) 
+  a = Value(10)
+  b = Value(23)
+  my_list = [a, b]
+  d = 10 + Map/get(List/index(my_list, 1), 0)
+  return print_value_s(d)
